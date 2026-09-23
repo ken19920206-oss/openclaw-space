@@ -9,8 +9,8 @@ DATA_ROOT = Path("data_us")
 OUT = Path("results")
 OUT.mkdir(parents=True, exist_ok=True)
 
-MIN_PRICE = 5.0
-MIN_DVOL = 2_000_000.0
+MIN_PRICE = 10.0
+MIN_DVOL = 20_000_000.0
 ROUND_TRIP_COST = 0.002
 YEARS = list(range(2016, 2026))
 HOLD_DAYS = [1, 3, 5, 10, 20]
