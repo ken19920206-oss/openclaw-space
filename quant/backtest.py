@@ -119,7 +119,7 @@ def build(df):
       "S36_volume_break20":(c("close")>c("hi20"))&(c("vol")>c("vol20")*1.2),
       "S37_vol_ratio_break":(c("ret5")>0.05)&(c("vol")>c("vol20")*1.5),
       "S38_range_volume":(c("range")>c("range").rolling_mean(10)*1.5)&(c("vol")>c("vol20")*1.5)&(c("close")>c("open")),
-      "S39_mom_lowvol":(c("ret20")>0.08)&(c("atrpct")<c("atrpct").rolling_quantile(120,0.50)),
+      "S39_mom_lowvol":(c("ret20")>0.08)&(c("atrpct")<c("atrpct").rolling_quantile(quantile=0.50, window_size=120)),
       "S40_break_rsi":(c("close")>c("hi55"))&(c("rsi14").is_between(50,72)),
       "S41_break_slope_vol":(c("close")>c("hi20"))&(c("slope20")>0.02)&(c("vol")>c("vol20")),
       "S42_pullback_200":(c("close")>c("ma200"))&(c("close")/c("ma20")<0.96)&(c("rsi14")<40),
@@ -127,7 +127,7 @@ def build(df):
       "S44_high52_break20":(c("dist52")>0.95)&(c("close")>c("hi20")),
       "S45_mom20_volume":(c("ret20")>0.10)&(c("vol")>c("vol20")*1.2),
       "S46_mom60_slope":(c("ret60")>0.15)&(c("slope20")>0.03),
-      "S47_bb_squeeze_break":(c("z20")>1.5)&(c("atrpct")<c("atrpct").rolling_quantile(120,0.50)),
+      "S47_bb_squeeze_break":(c("z20")>1.5)&(c("atrpct")<c("atrpct").rolling_quantile(quantile=0.50, window_size=120)),
       "S48_reversal_above200":(c("close")>c("ma200"))&(c("z20")<-1.5)&(c("ret1")>0),
       "S49_multi_factor":(c("ret20")>0.05)&(c("ret60")>0.08)&(c("close")>c("ma100"))&(c("rsi14")>50)&(c("vol")>c("vol20")),
       "S50_ensemble":(c("ret20")>0)&(c("close")>c("ma50"))&(((c("z20")>0.5)&(c("rsi14")>50))|((c("z20")<-1.2)&(c("rsi14")<40)))
