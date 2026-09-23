@@ -6,7 +6,7 @@ import polars as pl
 warnings.filterwarnings("ignore")
 
 DATA_ROOT = Path("data_us")
-OUT = Path("results_v3")
+OUT = Path("results")
 OUT.mkdir(parents=True, exist_ok=True)
 
 MIN_PRICE = 5.0
@@ -138,6 +138,8 @@ def add_trade_to_agg(agg_sum, agg_n, strategy, dates, opens, closes, entry_idx, 
     day_rets[0] = closes[entry_idx] / opens[entry_idx] - 1.0
     if hold > 1:
         day_rets[1:] = closes[entry_idx+1:exit_idx+1] / closes[entry_idx:exit_idx] - 1.0
+    if not np.isfinite(day_rets).all() or (np.abs(day_rets)>0.90).any():
+        return False
     day_rets -= ROUND_TRIP_COST / hold
     for k, ret in enumerate(day_rets):
         dt = dates[entry_idx+k]
@@ -162,7 +164,7 @@ for i,p in enumerate(files,1):
     df=df.with_columns(
         (pl.col("close")*pl.col("vol")).rolling_mean(20).shift(1).alias("dvol20")
     )
-    df=build_signals(build_features(df)).filter(
+    df=build_signals(build_features(df)).fill_null(0).filter(
         (pl.col("close")>=MIN_PRICE)&
         (pl.col("dvol20")>=MIN_DVOL)
     )
@@ -219,8 +221,9 @@ for s in STRATEGIES:
 
     cagr=float(eq[-1]**(252/len(eq))-1)
     dd=float(np.min(eq/np.maximum.accumulate(eq)-1))
+    vals=np.nan_to_num(vals,nan=0.0,posinf=0.0,neginf=0.0)
     sd=float(np.std(vals))
-    sharpe=float(np.mean(vals)/sd*np.sqrt(252)) if sd>0 else np.nan
+    sharpe=float(np.mean(vals)/sd*np.sqrt(252)) if sd>0 else 0.0
 
     yr={}
     for y in YEARS:
