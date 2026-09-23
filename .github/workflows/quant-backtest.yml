@@ -24,10 +24,10 @@ jobs:
       - name: Prepare data link
         run: ln -s "$GITHUB_WORKSPACE/stooq/d_us_txt/data/daily/us" "$GITHUB_WORKSPACE/data_us"
       - name: Run 50 strategy backtest
-        run: python quant/backtest.py
+        run: python quant/backtest_v3.py
       - name: Upload results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: us-swing-50-results
+          name: us-swing-50-results-v3
           path: results/
