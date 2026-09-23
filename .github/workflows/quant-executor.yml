@@ -1,0 +1,36 @@
+name: quant-executor
+
+on:
+  workflow_run:
+    workflows: ["quant-backtest"]
+    types: [completed]
+  workflow_dispatch:
+
+jobs:
+  execute:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install deps
+        run: pip install -r quant/requirements.txt
+      - name: Fetch Stooq US stock archive
+        run: |
+          git clone --depth 1 --filter=blob:none --sparse https://github.com/ARKMD/stooq.git stooq
+          cd stooq
+          git sparse-checkout set --no-cone 'd_us_txt/data/daily/us/nasdaq stocks/**' 'd_us_txt/data/daily/us/nyse stocks/**' 'd_us_txt/data/daily/us/nysemkt stocks/**'
+      - name: Prepare data link
+        run: ln -s "$GITHUB_WORKSPACE/stooq/d_us_txt/data/daily/us" "$GITHUB_WORKSPACE/data_us"
+      - name: Run 50 strategy backtest
+        run: python quant/backtest.py
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: us-swing-50-results-executor
+          path: results/
