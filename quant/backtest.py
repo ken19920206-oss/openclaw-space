@@ -3,7 +3,7 @@ import glob, warnings
 import numpy as np
 import polars as pl
 
-warnings.filterwarnings("ignore")
+# 2026-09-23 execution marker\nwarnings.filterwarnings("ignore")
 
 DATA_ROOT = Path("data_us")
 OUT = Path("results")
