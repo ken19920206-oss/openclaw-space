@@ -168,7 +168,7 @@ for s in STRATEGIES:
         n=counts[s][dt]
         rows.append((dt,agg[s][dt]/n if n else 0.0,n))
     daily=pl.DataFrame(rows,schema=["date","gross","n"],orient="row").sort("date")
-    daily=daily.with_columns((pl.lit(COST_BPS_RT/10000).alias("cost")),(pl.col("gross")-pl.col("cost")).alias("net"))
+    daily=daily.with_columns(pl.lit(COST_BPS_RT/10000).alias("cost")).with_columns((pl.col("gross")-pl.col("cost")).alias("net"))
     vals=daily["net"].to_numpy()
     eq=np.cumprod(1+np.nan_to_num(vals,nan=0.0))
     if len(eq)<252: continue
