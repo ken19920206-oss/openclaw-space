@@ -104,7 +104,7 @@ def build(df):
       "S21_drop10":c("ret10")<-0.18,
       "S22_three_red":(c("ret3")<-0.06)&(c("close")<c("ma20")),
       "S23_reversal":(c("close")<c("ma20"))&(c("close")>c("open"))&(c("ret1")<0),
-      "S24_atr_extreme":(c("atrpct")>c("atrpct").rolling_quantile(120,0.80))&(c("ret3")<-0.05),
+      "S24_atr_extreme":(c("atrpct")>c("atrpct").rolling_quantile(quantile=0.80, window_size=120))&(c("ret3")<-0.05),
       "S25_gap_down_reversal":(c("gap")<-0.04)&(c("close")>c("open")),
       "S26_under_52high":(c("dist52")<0.75)&(c("ret5")>0),
       "S27_stretch_ma20":c("close")/c("ma20")<0.93,
