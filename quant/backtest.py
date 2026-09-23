@@ -140,6 +140,7 @@ print("stock files",len(files))
 # Daily aggregate: equal-weight every qualifying stock signal, then subtract a 20bp round-trip proxy only on days with trades.
 agg={s:{} for s in STRATEGIES}
 counts={s:{} for s in STRATEGIES}
+all_dates=set()
 
 for i,p in enumerate(files,1):
     df=load_one(p)
@@ -148,6 +149,7 @@ for i,p in enumerate(files,1):
     df=build(df).filter((pl.col("close")>=MIN_PRICE)&(pl.col("dvol20")>=MIN_DVOL)&pl.col("next_ret").is_not_null())
     if df.height==0: continue
     dates=df["date"].to_list()
+    all_dates.update(dates)
     nr=df["next_ret"].to_numpy()
     for s in STRATEGIES:
         a=df[s].to_numpy().astype(bool)
@@ -161,14 +163,21 @@ for i,p in enumerate(files,1):
     if i%1000==0: print("processed",i)
 
 out=[]
+calendar=pl.DataFrame({"date":sorted(all_dates)}).sort("date")
 for s in STRATEGIES:
     ds=sorted(agg[s])
     rows=[]
     for dt in ds:
         n=counts[s][dt]
         rows.append((dt,agg[s][dt]/n if n else 0.0,n))
-    daily=pl.DataFrame(rows,schema=["date","gross","n"],orient="row").sort("date")
-    daily=daily.with_columns(pl.lit(COST_BPS_RT/10000).alias("cost")).with_columns((pl.col("gross")-pl.col("cost")).alias("net"))
+    active=pl.DataFrame(rows,schema=["date","gross","n"],orient="row").sort("date") if rows else pl.DataFrame({"date":[],"gross":[],"n":[]},schema={"date":pl.Date,"gross":pl.Float64,"n":pl.Int64})
+    daily=calendar.join(active,on="date",how="left").with_columns([
+        pl.col("gross").fill_null(0.0),
+        pl.col("n").fill_null(0)
+    ]).with_columns([
+        pl.when(pl.col("n")>0).then(pl.lit(COST_BPS_RT/10000)).otherwise(pl.lit(0.0)).alias("cost"),
+        pl.when(pl.col("n")>0).then(pl.col("gross")-pl.lit(COST_BPS_RT/10000)).otherwise(pl.col("gross")).alias("net")
+    ])
     vals=daily["net"].to_numpy()
     eq=np.cumprod(1+np.nan_to_num(vals,nan=0.0))
     if len(eq)<252: continue
@@ -181,13 +190,15 @@ for s in STRATEGIES:
         yy=daily.filter(pl.col("date").dt.year()==y)["net"].to_numpy()
         yr[y]=float(np.prod(1+np.nan_to_num(yy,nan=0.0))-1) if len(yy) else np.nan
     hit=sum(1 for y in YEARS if np.isfinite(yr[y]) and yr[y]>=0.20)
-    out.append({"strategy":s,"cagr":cagr,"max_dd":dd,"sharpe":sharpe,"years_ge_20":hit,
+    active_days=int((daily["n"]>0).sum())
+    avg_positions=float(daily.filter(pl.col("n")>0)["n"].mean()) if active_days else 0.0
+    out.append({"strategy":s,"cagr":cagr,"max_dd":dd,"sharpe":sharpe,"years_ge_20":hit,"active_days":active_days,"avg_positions":avg_positions,
                 **{f"r_{y}":yr[y] for y in YEARS}})
 res=pl.DataFrame(out).sort(["years_ge_20","cagr"],descending=True)
 res.write_csv(OUT/"strategy_results_2016_2025.csv")
 screen=[]
 for r in res.iter_rows(named=True):
-    screen.append({"strategy":r["strategy"],"cagr":r["cagr"],"years_ge20":r["years_ge_20"],"max_dd":r["max_dd"],"sharpe":r["sharpe"],
+    screen.append({"strategy":r["strategy"],"cagr":r["cagr"],"years_ge20":r["years_ge_20"],"max_dd":r["max_dd"],"sharpe":r["sharpe"],"active_days":r["active_days"],"avg_positions":r["avg_positions"],
                    "2023":r["r_2023"],"2024":r["r_2024"],"2025":r["r_2025"],
                    "passes":bool(r["cagr"]>=0.20 and r["years_ge_20"]>=8 and r["max_dd"]>=-0.30 and r["sharpe"]>=1.0)})
 pl.DataFrame(screen).write_csv(OUT/"screened_results.csv")
